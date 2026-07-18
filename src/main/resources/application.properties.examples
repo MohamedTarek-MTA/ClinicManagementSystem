@@ -1,0 +1,56 @@
+#   App Name
+spring.application.name=ClinicManagementSystem
+
+
+# Datasource Configuration (CURD)
+spring.datasource.url=YourMySqlURL
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.username=username
+spring.datasource.password=password
+
+
+# JPA Configuration
+spring.jpa.database-platform=org.hibernate.dialect.MySQLDialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+logging.level.org.hibernate.SQL=DEBUG
+logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
+
+#Server Configuration
+server.port=8090
+server.ssl.key-store=YourClassPath
+server.ssl.key-store-type=PKCS12
+server.ssl.key-store-password=YourPassword
+server.ssl.key-alias=YourAlis
+
+#Mail Configuration
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=YourName
+spring.mail.password=YourPassword
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.debug=true
+
+
+#Security
+# 15 minutes = 900000 , 1 minute = 60000
+# 7 days = 604800000 , 1 day = 86,400,000
+spring.jwt.secretKey=YourSecret
+spring.jwt.expiration=900000
+spring.jwt.refresh.expiration=604800000
+
+#Image Configuration
+imgbb.api.key=YourKey
+spring.servlet.multipart.enabled=true
+spring.servlet.multipart.max-file-size=500MB
+spring.servlet.multipart.max-request-size=500MB
+
+#Redis Configuration
+spring.redis.host=yourHost
+spring.redis.port=yourPort
+spring.cache.type=YourType
+
+# MongoDB
+spring.data.mongodb.uri=YourMongoUri
