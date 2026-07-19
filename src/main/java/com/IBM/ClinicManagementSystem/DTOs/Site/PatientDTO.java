@@ -1,4 +1,4 @@
-package com.IBM.ClinicManagementSystem.DTOs;
+package com.IBM.ClinicManagementSystem.DTOs.Site;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

@@ -1,4 +1,4 @@
-package com.IBM.ClinicManagementSystem.DTOs;
+package com.IBM.ClinicManagementSystem.DTOs.Site;
 
 import com.IBM.ClinicManagementSystem.Models.Entities.Appointment;
 import com.IBM.ClinicManagementSystem.Models.Entities.Doctor;

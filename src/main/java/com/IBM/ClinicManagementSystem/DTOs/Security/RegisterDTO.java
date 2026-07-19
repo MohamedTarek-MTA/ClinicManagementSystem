@@ -1,4 +1,4 @@
-package com.IBM.ClinicManagementSystem.DTOs;
+package com.IBM.ClinicManagementSystem.DTOs.Security;
 
 import com.IBM.ClinicManagementSystem.Models.Entities.User;
 import jakarta.validation.constraints.Email;
