@@ -52,5 +52,8 @@ spring.redis.host=yourHost
 spring.redis.port=yourPort
 spring.cache.type=YourType
 
+#CORS Configuration
+app.cors.allowed-origins=frontendUrl
+
 # MongoDB
 spring.data.mongodb.uri=YourMongoUri

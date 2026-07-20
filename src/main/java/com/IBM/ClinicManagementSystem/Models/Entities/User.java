@@ -7,7 +7,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -46,10 +45,6 @@ public class User implements UserDetails {
     @Column(unique = true,nullable = false)
     private String email;
     @NotBlank(message = "Password is required")
-    @Pattern(
-            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&.#^_+=()-])[A-Za-z\\d@$!%*?&.#^_+=()-]{8,}$",
-            message = "Password must be at least 8 characters and contain an uppercase letter, a lowercase letter, a number, and a special character"
-    )
     private String password;
     private String profileImageUrl;
     private String address;
@@ -75,7 +70,7 @@ public class User implements UserDetails {
     }
 
     @Override
-    public @Nullable String getPassword() {
+    public String getPassword() {
         return password;
     }
 
@@ -99,6 +94,7 @@ public class User implements UserDetails {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         if (this.enabled == null) this.enabled = false;
+        if(this.status == null) this.status = Status.INACTIVE;
     }
     public enum Gender{
         MALE,FEMALE,OTHER
@@ -107,7 +103,7 @@ public class User implements UserDetails {
         ADMIN,PATIENT,DOCTOR,OTHER
     }
     public enum Status{
-        ACTIVE,BANNED,DELETED
+        ACTIVE,BANNED,DELETED,INACTIVE
     }
 
 }

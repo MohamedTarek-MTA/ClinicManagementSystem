@@ -1,4 +1,4 @@
-package com.IBM.ClinicManagementSystem.DTOs;
+package com.IBM.ClinicManagementSystem.DTOs.Site;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,7 +9,5 @@ import lombok.experimental.SuperBuilder;
 @Setter
 @NoArgsConstructor
 @SuperBuilder
-public class DoctorDTO extends UserDTO{
-    private String specialization;
-    private String clinicInfo;
+public class AdminDTO extends UserDTO {
 }
