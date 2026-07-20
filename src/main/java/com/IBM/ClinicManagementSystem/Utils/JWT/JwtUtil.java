@@ -3,6 +3,7 @@ package com.IBM.ClinicManagementSystem.Utils.JWT;
 import com.IBM.ClinicManagementSystem.Configurations.JwtConfig;
 import com.IBM.ClinicManagementSystem.Models.Entities.RefreshToken;
 import com.IBM.ClinicManagementSystem.Repositories.Mysql.RefreshTokenRepository;
+import com.IBM.ClinicManagementSystem.Services.Site.UserService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
