@@ -4,6 +4,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -15,4 +17,5 @@ public class MailDTO {
     private String email;
     @NotBlank
     private String verificationCode;
+    private LocalDateTime verificationCodeExpirationTime;
 }

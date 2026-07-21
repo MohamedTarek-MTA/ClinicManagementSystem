@@ -17,13 +17,19 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true,nullable = false)
+    @Column(nullable = false, unique = true, length = 512)
     private String refreshToken;
 
     @Column(nullable = false)
     private Instant expirationDate;
 
-    @OneToOne
-    @JoinColumn(name = "user_id",referencedColumnName = "id")
+    @Column(nullable = false)
+    private String deviceName;
+
+    @Column(nullable = false)
+    private String ipAddress;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private User user;
 }

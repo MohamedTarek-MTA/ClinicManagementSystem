@@ -29,7 +29,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(authService.register(request)));
     }
     @PostMapping("/verify-account")
-    @RateLimit(maxRequests = 1, timeWindowMs = 1500)
+    @RateLimit(maxRequests = 1, timeWindowMs = 15000)
     public ResponseEntity<?> verifyAccount(@Valid @RequestBody MailDTO dto){
         return ResponseEntity.ok(ApiResponse.success(authService.verifyAccount(dto)));
     }
