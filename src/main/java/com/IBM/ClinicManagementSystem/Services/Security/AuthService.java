@@ -16,6 +16,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,6 +37,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
 
     @Transactional
+
     public String register(RegisterDTO request){
         if(userService.userExistsByEmail(request.getEmail())){
             throw new IllegalArgumentException("This Email Already Exists !");
@@ -79,7 +82,7 @@ public class AuthService {
         generateRefreshTokenCookies(jwtUtil.generateRefreshToken(user.getId()),response);
         return new AccessTokenDTO(token);
     }
-
+    @Transactional
     public String verifyAccount(MailDTO dto){
         var user = userService.getUserEntityByEmail(dto.getEmail());
         if(user.getEnabled() || user.getVerificationCode() == null){
@@ -89,7 +92,7 @@ public class AuthService {
             throw new IllegalArgumentException("Verification Code Didn't Match !!");
         }
         user.setVerificationCode(null);
-        userService.activeUser(user.getId());
+        userService.changeUserStatus(user.getId(), User.Status.ACTIVE);
         return "Your Account Has Been Verified Successfully !";
     }
 
@@ -108,7 +111,7 @@ public class AuthService {
             throw new RuntimeException("Something Wrong happened please try again ",e.getCause());
         }
     }
-
+    @Transactional
     public String resetPassword(ResetPasswordDTO request){
         var user = userService.getUserEntityByEmail(request.getEmail());
 
