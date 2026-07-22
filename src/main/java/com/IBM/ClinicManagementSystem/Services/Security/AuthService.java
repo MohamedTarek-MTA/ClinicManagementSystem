@@ -16,14 +16,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -57,10 +56,11 @@ public class AuthService {
                     .gender(request.getGender())
                     .role(request.getRole())
                     .verificationCode(verificationCode)
+                    .verificationCodeExpirationTime(LocalDateTime.now().plusMinutes(15))
                     .build();
             userService.saveUser(user);
             mailService.sendCodeToViaEmail(MailMapper.toDTO(user.getEmail(),verificationCode));
-            return "Please Check Your Email to Get Verification Code !!";
+            return "Please Check Your Email to Get Verification Code, It's Valid For Just 15 Minutes";
         }catch (Exception e){
             e.printStackTrace();
             log.error("Error occurred while registering user", e);
@@ -88,10 +88,14 @@ public class AuthService {
         if(user.getEnabled() || user.getVerificationCode() == null){
             throw new IllegalArgumentException("This account already verified !");
         }
+        if (LocalDateTime.now().isAfter(user.getVerificationCodeExpirationTime())) {
+            throw new IllegalArgumentException("Verification code has expired.");
+        }
         if(!user.getVerificationCode().equals(dto.getVerificationCode())){
             throw new IllegalArgumentException("Verification Code Didn't Match !!");
         }
         user.setVerificationCode(null);
+        user.setVerificationCodeExpirationTime(null);
         userService.changeUserStatus(user.getId(), User.Status.ACTIVE);
         return "Your Account Has Been Verified Successfully !";
     }
@@ -104,6 +108,7 @@ public class AuthService {
         try{
             String verificationCode = Helper.generateCode();
             user.setVerificationCode(verificationCode);
+            user.setVerificationCodeExpirationTime(LocalDateTime.now().plusMinutes(15));
             userService.saveUser(user);
             mailService.sendCodeToViaEmail(MailMapper.toDTO(user.getEmail(),verificationCode));
             return "Please Check Your Email to Get Verification Code !!";

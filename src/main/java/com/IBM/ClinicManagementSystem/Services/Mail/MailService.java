@@ -32,12 +32,12 @@ public class MailService {
             String htmlContent =
                     """
                     <div style="font-family: Arial, sans-serif; padding: 20px;">
-                        <h2 style="color: #1a73e8;">Verification Email</h2>
+                        <h2 style="color: #1a73e8;">Clinic Management System</h2>
                         <p style="font-size: 16px;">Your verification code is:</p>
                         <p style="font-size: 28px; font-weight: bold; color: #333;">
                             %s
                         </p>
-                        <p>This code will expire shortly.</p>
+                        <p>This code will expire after 15 minutes.</p>
                     </div>
                     """.formatted(dto.getVerificationCode());
 

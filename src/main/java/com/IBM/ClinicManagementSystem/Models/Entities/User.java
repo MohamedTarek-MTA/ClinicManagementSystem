@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -29,6 +31,7 @@ import java.util.Collections;
 @NoArgsConstructor
 @Inheritance(strategy = InheritanceType.JOINED)
 @SuperBuilder
+@EntityListeners(AuditingEntityListener.class)
 public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,12 +49,14 @@ public class User implements UserDetails {
     private String email;
     @NotBlank(message = "Password is required")
     private String password;
-    private String profileImageUrl;
+    private String profileImageKey;
     private String address;
     @NotNull
     private LocalDate birthdate;
-    @Column(updatable = false)
+    @Column(updatable = false,nullable = false)
     private LocalDateTime createdAt;
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
     @NotNull
     @Enumerated(EnumType.STRING)
     private Gender gender;
@@ -62,6 +67,7 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     private Status status;
     private String verificationCode;
+    private LocalDateTime verificationCodeExpirationTime;
     private String info;
     private Boolean enabled;
     @Override

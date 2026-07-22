@@ -6,54 +6,65 @@ import com.IBM.ClinicManagementSystem.Mappers.Site.PageMapper;
 import com.IBM.ClinicManagementSystem.Mappers.Site.UserMapper;
 import com.IBM.ClinicManagementSystem.Models.Entities.User;
 import com.IBM.ClinicManagementSystem.Repositories.Mysql.UserRepository;
+import com.IBM.ClinicManagementSystem.Services.Image.S3Service;
 import com.IBM.ClinicManagementSystem.Utils.User.UserSpecifications;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final S3Service s3Service;
 
-    public User getUserEntityById(Long id){
-        return userRepository.findById(id).orElseThrow(()->new IllegalArgumentException("User Not Found!"));
+    public User getUserEntityById(Long id) {
+        return userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("User Not Found!"));
     }
-    public Boolean userExistsByEmail(String email){
-        return  userRepository.existsByEmail(email);
+
+    public Boolean userExistsByEmail(String email) {
+        return userRepository.existsByEmail(email);
     }
-    public Boolean userExistsByPhone(String phone){
+
+    public Boolean userExistsByPhone(String phone) {
         return userRepository.existsByPhone(phone);
     }
-    @Cacheable(value = "usersById",key = "#id")
-    public UserDTO getUserById(Long id){
+
+    @Cacheable(value = "usersById", key = "#id")
+    public UserDTO getUserById(Long id) {
         return userMapper.toDTO(
                 userRepository.findById(id).orElseThrow(()
                         -> new IllegalArgumentException("User Not Found !")));
     }
 
-    public User getUserEntityByEmail(String email){
+    public User getUserEntityByEmail(String email) {
         return userRepository.findByEmail(email).orElseThrow(()
                 -> new IllegalArgumentException("User or Email are Not Found !"));
     }
-    @Cacheable(value = "usersByEmail",key = "#email")
-    public UserDTO getUserByEmail(String email){
+
+    @Cacheable(value = "usersByEmail", key = "#email")
+    public UserDTO getUserByEmail(String email) {
         return userMapper.toDTO(getUserEntityByEmail(email));
     }
-    @Cacheable(value = "usersByPhone",key = "#phone")
-    public UserDTO getUserByPhone(String phone){
+
+    @Cacheable(value = "usersByPhone", key = "#phone")
+    public UserDTO getUserByPhone(String phone) {
         return userMapper.toDTO(
                 userRepository.findByPhone(phone).orElseThrow(()
                         -> new IllegalArgumentException("User or Phone Number are Not Found !")));
     }
+
     @Cacheable(
             value = "usersPage",
             key = "{" +
@@ -66,19 +77,21 @@ public class UserService {
                     "#pageable.pageSize, " +
                     "#pageable.sort.toString()" +
                     "}"
-    )    public PageDTO<UserDTO> searchUsers(
-                                    String name,
-                                   String address,
-                                   User.Gender gender,
-                                   User.Status status,
-                                   User.Role role,
-                                   Pageable pageable
-    ){
+    )
+    public PageDTO<UserDTO> searchUsers(
+            String name,
+            String address,
+            User.Gender gender,
+            User.Status status,
+            User.Role role,
+            Pageable pageable
+    ) {
         Specification<User> specification =
-                UserSpecifications.filterUsers(name,address,gender,status,role);
+                UserSpecifications.filterUsers(name, address, gender, status, role);
         return PageMapper.toDTO(
-                userRepository.findAll(specification,pageable).map(userMapper::toDTO));
+                userRepository.findAll(specification, pageable).map(userMapper::toDTO));
     }
+
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "usersPage", allEntries = true),
@@ -86,7 +99,7 @@ public class UserService {
             @CacheEvict(value = "usersByEmail", key = "#result.email", condition = "#result != null"),
             @CacheEvict(value = "usersByPhone", key = "#result.phone", condition = "#result != null")
     })
-    public UserDTO changeUserStatus(Long id, User.Status status){
+    public UserDTO changeUserStatus(Long id, User.Status status) {
         var user = getUserEntityById(id);
         Optional.ofNullable(status).ifPresent(user::setStatus);
         if (user.getStatus().equals(User.Status.ACTIVE)) {
@@ -104,12 +117,13 @@ public class UserService {
             @CacheEvict(value = "usersByEmail", key = "#result.email", condition = "#result != null"),
             @CacheEvict(value = "usersByPhone", key = "#result.phone", condition = "#result != null")
     })
-    public UserDTO enableUserById(Long id){
+    public UserDTO enableUserById(Long id) {
         var user = getUserEntityById(id);
         user.setStatus(User.Status.ACTIVE);
         user.setEnabled(true);
-       return userMapper.toDTO(userRepository.saveAndFlush(user));
+        return userMapper.toDTO(userRepository.saveAndFlush(user));
     }
+
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "usersPage", allEntries = true),
@@ -117,12 +131,13 @@ public class UserService {
             @CacheEvict(value = "usersByEmail", key = "#result.email", condition = "#result != null"),
             @CacheEvict(value = "usersByPhone", key = "#result.phone", condition = "#result != null")
     })
-    public UserDTO disableUserById(Long id){
+    public UserDTO disableUserById(Long id) {
         var user = getUserEntityById(id);
         user.setStatus(User.Status.BANNED);
         user.setEnabled(false);
-       return userMapper.toDTO(userRepository.saveAndFlush(user));
+        return userMapper.toDTO(userRepository.saveAndFlush(user));
     }
+
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "usersPage", allEntries = true),
@@ -130,11 +145,26 @@ public class UserService {
             @CacheEvict(value = "usersByEmail", key = "#result.email", condition = "#result != null"),
             @CacheEvict(value = "usersByPhone", key = "#result.phone", condition = "#result != null")
     })
-    public UserDTO changeUserRole(Long id, User.Role role){
+    public UserDTO deleteUserById(Long id) {
+        var user = getUserEntityById(id);
+        user.setStatus(User.Status.DELETED);
+        user.setEnabled(false);
+        return userMapper.toDTO(userRepository.saveAndFlush(user));
+    }
+
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "usersPage", allEntries = true),
+            @CacheEvict(value = "usersById", key = "#result.id", condition = "#result != null"),
+            @CacheEvict(value = "usersByEmail", key = "#result.email", condition = "#result != null"),
+            @CacheEvict(value = "usersByPhone", key = "#result.phone", condition = "#result != null")
+    })
+    public UserDTO changeUserRole(Long id, User.Role role) {
         var user = getUserEntityById(id);
         Optional.ofNullable(role).ifPresent(user::setRole);
         return userMapper.toDTO(userRepository.saveAndFlush(user));
     }
+
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "usersPage", allEntries = true),
@@ -142,9 +172,64 @@ public class UserService {
             @CacheEvict(value = "usersByEmail", key = "#result.email", condition = "#result != null"),
             @CacheEvict(value = "usersByPhone", key = "#result.phone", condition = "#result != null")
     })
-    public User saveUser(User user){
+    public User saveUser(User user) {
         return userRepository.saveAndFlush(user);
     }
 
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "usersPage", allEntries = true),
+            @CacheEvict(value = "usersById", key = "#result.id", condition = "#result != null"),
+            @CacheEvict(value = "usersByEmail", key = "#result.email", condition = "#result != null"),
+            @CacheEvict(value = "usersByPhone", key = "#result.phone", condition = "#result != null")
+    })
+    public UserDTO updateUser(Long id, UserDTO dto) {
+        var user = getUserEntityById(id);
+        if (!user.getEnabled()) {
+            throw new IllegalArgumentException("This Account is " + user.getStatus().name() + " Please Try Again Later!");
+        }
+        Optional.ofNullable(dto.getName()).ifPresent(user::setName);
+        Optional.ofNullable(dto.getAddress()).ifPresent(user::setAddress);
+        Optional.ofNullable(dto.getBirthdate()).ifPresent(user::setBirthdate);
+        Optional.ofNullable(dto.getGender()).ifPresent(user::setGender);
+        Optional.ofNullable(dto.getInfo()).ifPresent(user::setInfo);
+        return userMapper.toDTO(userRepository.saveAndFlush(user));
+    }
 
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "usersPage", allEntries = true),
+            @CacheEvict(value = "usersById", key = "#result.id", condition = "#result != null"),
+            @CacheEvict(value = "usersByEmail", key = "#result.email", condition = "#result != null"),
+            @CacheEvict(value = "usersByPhone", key = "#result.phone", condition = "#result != null")
+    })
+    public UserDTO changeProfileImage(Long id, MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            throw new IllegalArgumentException("Profile image is required.");
+        }
+
+        User user = getUserEntityById(id);
+
+        String oldKey = user.getProfileImageKey();
+
+        String newKey = s3Service.uploadImage(
+                image,
+                user.getRole().name().toLowerCase()
+        );
+
+        user.setProfileImageKey(newKey);
+
+        User savedUser = userRepository.saveAndFlush(user);
+
+        if (oldKey != null) {
+            try {
+                s3Service.deleteImage(oldKey);
+            } catch (Exception ex) {
+                log.error("Failed to delete old profile image from S3. Key={}", oldKey, ex);
+            }
+
+        }
+        return userMapper.toDTO(savedUser);
+
+    }
 }

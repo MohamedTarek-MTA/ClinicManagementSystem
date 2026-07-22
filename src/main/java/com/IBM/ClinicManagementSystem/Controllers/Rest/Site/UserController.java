@@ -10,16 +10,15 @@ import com.IBM.ClinicManagementSystem.Utils.Helper.Helper;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("api/vi/users")
+@RequestMapping("api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
@@ -43,5 +42,56 @@ public class UserController {
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<UserDTO>> getUserProfile(@AuthenticationPrincipal CustomUserDetails userDetails){
         return ResponseEntity.ok(ApiResponse.success(userService.getUserById(userDetails.getId())));
+    }
+    @GetMapping("/user/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserDTO>> getUserById(@PathVariable Long id){
+        return ResponseEntity.ok(ApiResponse.success(userService.getUserById(id)));
+    }
+    @GetMapping("/user/email")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserDTO>> getUserByEmail(@RequestParam String email){
+        return ResponseEntity.ok(ApiResponse.success(userService.getUserByEmail(email)));
+    }
+    @GetMapping("/user/phone")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserDTO>> getUserByPhone(@RequestParam String phone){
+        return ResponseEntity.ok(ApiResponse.success(userService.getUserByPhone(phone)));
+    }
+
+    @PatchMapping("/change-status/user/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserDTO>> changeUserStatus(@PathVariable Long id, @RequestParam(required = true) User.Status status){
+        return ResponseEntity.ok(ApiResponse.success(userService.changeUserStatus(id,status)));
+    }
+    @PatchMapping("/change-role/user/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserDTO>> changeUserRole(@PathVariable Long id, @RequestParam(required = true) User.Role role){
+        return ResponseEntity.ok(ApiResponse.success(userService.changeUserRole(id,role)));
+    }
+
+    @PutMapping("/user/profile")
+    public ResponseEntity<ApiResponse<UserDTO>> updateUserProfile(@AuthenticationPrincipal CustomUserDetails userDetails, @RequestBody UserDTO dto){
+        return ResponseEntity.ok(ApiResponse.success(userService.updateUser(userDetails.getId(),dto)));
+    }
+
+    @PatchMapping(value = "/user/profile-pic",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<UserDTO>> changeProfilePic(@AuthenticationPrincipal CustomUserDetails userDetails, @RequestParam("image") MultipartFile image){
+        return ResponseEntity.ok(ApiResponse.success(userService.changeProfileImage(userDetails.getId(),image)));
+    }
+    @PatchMapping("/activate-user/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserDTO>> activateUser(@PathVariable Long id){
+        return ResponseEntity.ok(ApiResponse.success("User Activated Successfully!",userService.enableUserById(id)));
+    }
+    @PatchMapping("/ban-user/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserDTO>> banUser(@PathVariable Long id){
+        return ResponseEntity.ok(ApiResponse.success("User Banned Successfully!",userService.disableUserById(id)));
+    }
+    @DeleteMapping("/user/profile")
+    public ResponseEntity<?> deleteAccount(@AuthenticationPrincipal CustomUserDetails userDetails){
+        userService.deleteUserById(userDetails.getId());
+        return ResponseEntity.ok(ApiResponse.success("Your Account is deleted to restore it again please contact admin!"));
     }
 }
