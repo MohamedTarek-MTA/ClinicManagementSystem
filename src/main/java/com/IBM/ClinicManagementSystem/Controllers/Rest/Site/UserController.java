@@ -10,6 +10,7 @@ import com.IBM.ClinicManagementSystem.Utils.Helper.Helper;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("api/vi/users")
+@RequestMapping("api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
@@ -74,8 +75,8 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(userService.updateUser(userDetails.getId(),dto)));
     }
 
-    @PatchMapping("/user/profile-pic")
-    public ResponseEntity<ApiResponse<UserDTO>> changeProfilePic(@AuthenticationPrincipal CustomUserDetails userDetails, @RequestPart MultipartFile image){
+    @PatchMapping(value = "/user/profile-pic",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<UserDTO>> changeProfilePic(@AuthenticationPrincipal CustomUserDetails userDetails, @RequestParam("image") MultipartFile image){
         return ResponseEntity.ok(ApiResponse.success(userService.changeProfileImage(userDetails.getId(),image)));
     }
     @PatchMapping("/activate-user/{id}")
