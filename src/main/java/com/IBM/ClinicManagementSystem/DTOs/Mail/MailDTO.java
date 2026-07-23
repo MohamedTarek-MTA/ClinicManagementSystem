@@ -1,5 +1,6 @@
 package com.IBM.ClinicManagementSystem.DTOs.Mail;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -17,5 +18,6 @@ public class MailDTO {
     private String email;
     @NotBlank
     private String verificationCode;
+    @JsonIgnore
     private LocalDateTime verificationCodeExpirationTime;
 }
