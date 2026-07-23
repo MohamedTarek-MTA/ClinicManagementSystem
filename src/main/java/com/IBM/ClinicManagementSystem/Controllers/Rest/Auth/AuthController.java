@@ -7,12 +7,14 @@ import com.IBM.ClinicManagementSystem.DTOs.Security.ResetPasswordDTO;
 import com.IBM.ClinicManagementSystem.DTOs.Security.ResetVerificationCodeDTO;
 import com.IBM.ClinicManagementSystem.RateLimiter.RateLimit;
 import com.IBM.ClinicManagementSystem.Services.Security.AuthService;
+import com.IBM.ClinicManagementSystem.Services.Security.CustomUserDetails;
 import com.IBM.ClinicManagementSystem.Utils.Helper.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,18 +37,18 @@ public class AuthController {
     }
     @PostMapping("/login")
     @RateLimit(maxRequests = 5, timeWindowMs = 30000)
-    public ResponseEntity<?> login(@Valid @RequestBody LoginDTO request, HttpServletResponse response){
-        return ResponseEntity.ok(ApiResponse.success(authService.login(request,response)));
+    public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO,HttpServletRequest request ,HttpServletResponse response){
+        return ResponseEntity.ok(ApiResponse.success(authService.login(loginDTO,request,response)));
     }
     @PostMapping("/logout")
     @RateLimit(maxRequests = 5, timeWindowMs = 60000)
-    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response){
-        return ResponseEntity.ok(ApiResponse.success(authService.logout(request,response)));
+    public ResponseEntity<?> logout(@AuthenticationPrincipal CustomUserDetails userDetails, HttpServletRequest request, HttpServletResponse response){
+        return ResponseEntity.ok(ApiResponse.success(authService.logout(userDetails.getId(),request,response)));
     }
     @PostMapping("/refresh-token")
     @RateLimit(maxRequests = 5, timeWindowMs = 60000)
-    public ResponseEntity<?> refreshToken(HttpServletRequest request){
-        return ResponseEntity.ok(ApiResponse.success(authService.refreshAccessToken(request)));
+    public ResponseEntity<?> refreshToken(HttpServletRequest request,HttpServletResponse response){
+        return ResponseEntity.ok(ApiResponse.success(authService.refreshAccessToken(request,response)));
     }
     @PostMapping("/reset-password")
     @RateLimit(maxRequests = 5, timeWindowMs = 30000)
@@ -54,8 +56,13 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(authService.resetPassword(request)));
     }
     @PostMapping("/resend-code")
-    @RateLimit(maxRequests = 1, timeWindowMs = 1500)
+    @RateLimit(maxRequests = 1, timeWindowMs = 15000)
     public ResponseEntity<?> resendCode(@Valid @RequestBody ResetVerificationCodeDTO request){
         return ResponseEntity.ok(ApiResponse.success(authService.resendVerificationCode(request)));
+    }
+    @PostMapping("/logout-all")
+    @RateLimit(maxRequests = 1, timeWindowMs = 15000)
+    public ResponseEntity<?> logoutAll(@AuthenticationPrincipal CustomUserDetails userDetails,HttpServletRequest request,HttpServletResponse response){
+        return ResponseEntity.ok(ApiResponse.success(authService.logoutAll(userDetails.getId(),request,response)));
     }
 }

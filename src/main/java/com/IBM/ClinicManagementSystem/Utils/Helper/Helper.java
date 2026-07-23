@@ -1,5 +1,6 @@
 package com.IBM.ClinicManagementSystem.Utils.Helper;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -41,4 +42,32 @@ public class Helper {
         return String.valueOf(code);
     }
 
+    public static String getDeviceName(HttpServletRequest request){
+
+        String ua = request.getHeader("User-Agent");
+
+        if(ua.contains("Windows"))
+            return "Windows";
+
+        if(ua.contains("Android"))
+            return "Android";
+
+        if(ua.contains("iPhone"))
+            return "iPhone";
+
+        if(ua.contains("Mac"))
+            return "Mac";
+
+        return "Unknown";
+    }
+    public static String getClientIp(HttpServletRequest request) {
+
+        String forwarded = request.getHeader("X-Forwarded-For");
+
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+
+        return request.getRemoteAddr();
+    }
 }

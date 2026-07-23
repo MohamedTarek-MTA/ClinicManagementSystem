@@ -2,6 +2,7 @@ package com.IBM.ClinicManagementSystem.Utils.JWT;
 
 import com.IBM.ClinicManagementSystem.Configurations.JwtConfig;
 import com.IBM.ClinicManagementSystem.Models.Entities.RefreshToken;
+import com.IBM.ClinicManagementSystem.Models.Entities.User;
 import com.IBM.ClinicManagementSystem.Repositories.Mysql.RefreshTokenRepository;
 import com.IBM.ClinicManagementSystem.Services.Site.UserService;
 import io.jsonwebtoken.Claims;
@@ -68,30 +69,37 @@ public class JwtUtil {
         return extractUsername(token).equals(userDetails.getUsername()) && !isTokenExpired(token);
     }
 
-    public RefreshToken generateRefreshToken(Long userId){
-        var user = userService.getUserEntityById(userId);
-        return  refreshTokenRepository.save(
-                RefreshToken.builder()
-                        .user(user)
-                        .expirationDate(Instant.now().plusMillis(jwtConfig.getRefreshExpiration()))
-                        .refreshToken(UUID.randomUUID().toString())
-                        .build()
-        );
+    public RefreshToken generateRefreshToken(
+            Long userId,
+            String ip,
+            String device,
+            String userAgent
+    ) {
+
+        User user = userService.getUserEntityById(userId);
+
+        RefreshToken token = RefreshToken.builder()
+                .user(user)
+                .refreshToken(UUID.randomUUID().toString())
+                .expiryDate(
+                        Instant.now().plusMillis(jwtConfig.getRefreshExpiration())
+                )
+                .deviceName(device)
+                .ipAddress(ip)
+                .userAgent(userAgent)
+                .build();
+
+        return refreshTokenRepository.save(token);
     }
     public RefreshToken findRefreshToken(String refreshToken){
         return refreshTokenRepository.findByRefreshToken(refreshToken).orElseThrow(()->
                 new IllegalArgumentException("Refresh Token Not Found !"));
     }
     public void verifyExpiration(RefreshToken refreshToken){
-        if(refreshToken.getExpirationDate().isBefore(Instant.now())){
+        if(refreshToken.getExpiryDate().isBefore(Instant.now())){
             refreshTokenRepository.delete(refreshToken);
             throw new IllegalArgumentException("Refresh token was expired. Please make a new sign in request !");
         }
     }
-    public void deleteRefreshTokenByUserId(Long userId){
-        var user = userService.getUserEntityById(userId);
-        var refreshToken = refreshTokenRepository.findByUser_Id(userId).orElseThrow(()
-                ->new IllegalArgumentException("Refresh Token Not Found For This User !"));
-        refreshTokenRepository.delete(refreshToken);
-    }
+
 }

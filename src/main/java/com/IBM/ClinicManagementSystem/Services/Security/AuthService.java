@@ -16,11 +16,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hc.core5.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 
@@ -67,22 +71,46 @@ public class AuthService {
             throw new RuntimeException("An unexpected error occurred. Please try again later.");
         }
     }
-    public AccessTokenDTO login(LoginDTO request, HttpServletResponse response){
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(),request.getPassword())
-        );
-        var user = userService.getUserEntityByEmail(request.getEmail());
-        if(!user.getStatus().equals(User.Status.ACTIVE)){
-            throw new IllegalArgumentException("Your account is currently " + user.getStatus().name().toLowerCase() + ". Please verify or contact support.");
-        }
-        if(refreshTokenRepository.findByUser_Id(user.getId()).isPresent()){
-            throw new IllegalArgumentException("This Account Already Login If You Want New Token You Could Use refresh-token end point !");
-        }
-        String token = jwtUtil.generateToken(user.getId(),user.getEmail(),user.getRole().name(),user.getStatus().name());
-        generateRefreshTokenCookies(jwtUtil.generateRefreshToken(user.getId()),response);
-        return new AccessTokenDTO(token);
-    }
     @Transactional
+    public AccessTokenDTO login(LoginDTO request,
+                                HttpServletRequest httpRequest,
+                                HttpServletResponse response) {
+
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
+
+        User user = userService.getUserEntityByEmail(request.getEmail());
+
+        if (user.getStatus() != User.Status.ACTIVE) {
+            throw new IllegalArgumentException(
+                    "Your account is currently "
+                            + user.getStatus().name().toLowerCase()
+                            + ". Please verify or contact support."
+            );
+        }
+
+        String accessToken = jwtUtil.generateToken(
+                user.getId(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.getStatus().name()
+        );
+
+        RefreshToken refreshToken = jwtUtil.generateRefreshToken(
+                user.getId(),
+                Helper.getClientIp(httpRequest),
+                Helper.getDeviceName(httpRequest),
+                httpRequest.getHeader("User-Agent")
+        );
+
+        generateRefreshTokenCookie(refreshToken, response);
+
+        return new AccessTokenDTO(accessToken);
+    }    @Transactional
     public String verifyAccount(MailDTO dto){
         var user = userService.getUserEntityByEmail(dto.getEmail());
         if(user.getEnabled() || user.getVerificationCode() == null){
@@ -133,55 +161,135 @@ public class AuthService {
         userService.saveUser(user);
         return "Password Changed Successfully !";
     }
-    public String logout(HttpServletRequest request, HttpServletResponse response){
-        var refreshToken = extractRefreshTokenFromCookies(request);
-        if(refreshToken != null){
-            var token = jwtUtil.findRefreshToken(refreshToken);
-            if(token != null){
-                jwtUtil.deleteRefreshTokenByUserId(token.getUser().getId());
-            }
-        }
-        deleteRefreshTokenCookies(response);
-        return "Logged out successfully !";
-    }
+    @Transactional
+    public String logout(Long userId,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ){
 
-    public void generateRefreshTokenCookies(RefreshToken refreshToken, HttpServletResponse response){
-        Cookie cookie = new Cookie("refreshToken",refreshToken.getRefreshToken());
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true); // if not working it because https issues so make it false
-        cookie.setPath("/");
-        long maxAgeSeconds = refreshToken.getExpirationDate().getEpochSecond() - Instant.now().getEpochSecond();
-        cookie.setMaxAge((int)maxAgeSeconds);
-        response.addCookie(cookie);
-    }
-    public void deleteRefreshTokenCookies(HttpServletResponse response){
-        Cookie cookie = new Cookie("refreshToken",null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true); // if not working it because https issues so make it false
-        cookie.setPath("/api/v1/auth/refresh-token");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
-    }
-    public String extractRefreshTokenFromCookies(HttpServletRequest request){
-        String refreshToken = null;
-        if(request.getCookies() != null){
-            for(Cookie cookie : request.getCookies()){
-                if("refreshToken".equals(cookie.getName())){
-                    refreshToken = cookie.getValue();
-                }
+        String refreshToken = extractRefreshTokenFromCookies(request);
+
+        if (refreshToken != null) {
+
+            RefreshToken token = jwtUtil.findRefreshToken(refreshToken);
+
+            if (!token.getUser().getId().equals(userId)) {
+                throw new AccessDeniedException("Invalid refresh token.");
             }
+
+            refreshTokenRepository.delete(token);
         }
-        if(refreshToken == null){
-            throw new IllegalArgumentException("Refresh Token Not Found !");
-        }
-        return refreshToken;
+
+        deleteRefreshTokenCookie(response);
+
+        return "Logged out successfully.";
     }
-    public AccessTokenDTO refreshAccessToken(HttpServletRequest request){
-        var refreshToken = extractRefreshTokenFromCookies(request);
+    @Transactional
+    public void generateRefreshTokenCookie(RefreshToken refreshToken,
+                                           HttpServletResponse response) {
+
+        long maxAgeSeconds = refreshToken.getExpiryDate().getEpochSecond()
+                - Instant.now().getEpochSecond();
+
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken.getRefreshToken())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/api/v1/auth")
+                .maxAge(Duration.ofSeconds(maxAgeSeconds))
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+    public void deleteRefreshTokenCookie(HttpServletResponse response) {
+
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/api/v1/auth")
+                .maxAge(Duration.ZERO)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+    private String extractRefreshTokenFromCookies(
+            HttpServletRequest request
+    ){
+
+        if(request.getCookies()==null)
+            return null;
+
+        for(Cookie cookie : request.getCookies()){
+
+            if("refreshToken".equals(cookie.getName())){
+
+                return cookie.getValue();
+            }
+
+        }
+
+        throw new IllegalArgumentException("Refresh token missing.");
+    }
+    @Transactional
+    public AccessTokenDTO refreshAccessToken(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+
+        String refreshTokenString =
+                extractRefreshTokenFromCookies(request);
+
+        RefreshToken refreshToken =
+                jwtUtil.findRefreshToken(refreshTokenString);
+
+        jwtUtil.verifyExpiration(refreshToken);
+
+        if (refreshToken.getRevoked()) {
+            throw new IllegalArgumentException("Refresh token revoked.");
+        }
+
+        User user = refreshToken.getUser();
+
+        refreshTokenRepository.delete(refreshToken);
+
+        RefreshToken newRefresh =
+                jwtUtil.generateRefreshToken(
+                        user.getId(),
+                        request.getRemoteAddr(),
+                        refreshToken.getDeviceName(),
+                        request.getHeader("User-Agent")
+                );
+
+        generateRefreshTokenCookie(newRefresh,response);
+
+        String accessToken =
+                jwtUtil.generateToken(
+                        user.getId(),
+                        user.getEmail(),
+                        user.getRole().name(),
+                        user.getStatus().name()
+                );
+
+        return new AccessTokenDTO(accessToken);
+    }
+    @Transactional
+    public String logoutAll(Long userId,
+                            HttpServletRequest request,
+                            HttpServletResponse response) {
+
+        String refreshToken = extractRefreshTokenFromCookies(request);
+
         RefreshToken token = jwtUtil.findRefreshToken(refreshToken);
-        jwtUtil.verifyExpiration(token);
-        var user = token.getUser();
-        var newAccessToken = jwtUtil.generateToken(user.getId(),user.getEmail(),user.getRole().name(),user.getStatus().name());
-        return new AccessTokenDTO(newAccessToken);
+
+        if (!token.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("Invalid refresh token.");
+        }
+
+        refreshTokenRepository.deleteAllByUser_Id(userId);
+
+        deleteRefreshTokenCookie(response);
+
+        return "Logged out successfully from all devices.";
     }
 }

@@ -36,7 +36,8 @@ public class SecurityConfig {
                 .sessionManagement(session->session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .authorizeHttpRequests(auth->auth
+                .authorizeHttpRequests(auth -> auth
+
                         .requestMatchers(
                                 "/",
                                 "/login",
@@ -45,16 +46,28 @@ public class SecurityConfig {
                                 "/js/**",
                                 "/images/**",
                                 "/favicon.ico",
-                                "/api/v1/auth/**",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**",
                                 "/swagger-ui.html",
-                                "/swagger-ui/**",
                                 "/v3/api-docs/**"
-                        )
-                        .permitAll()
+                        ).permitAll()
+
+                        .requestMatchers(
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/verify-account",
+                                "/api/v1/auth/resend-verification-code",
+                                "/api/v1/auth/reset-password",
+                                "/api/v1/auth/refresh-token"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                "/api/v1/auth/logout",
+                                "/api/v1/auth/logout-all"
+                        ).authenticated()
+
                         .anyRequest().authenticated()
                 )
+
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp
                                 .policyDirectives("default-src 'self'; " +
