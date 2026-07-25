@@ -3,8 +3,7 @@ package com.IBM.ClinicManagementSystem.Services.Security;
 import com.IBM.ClinicManagementSystem.DTOs.Mail.MailDTO;
 import com.IBM.ClinicManagementSystem.DTOs.Security.*;
 import com.IBM.ClinicManagementSystem.Mappers.Mail.MailMapper;
-import com.IBM.ClinicManagementSystem.Models.Entities.RefreshToken;
-import com.IBM.ClinicManagementSystem.Models.Entities.User;
+import com.IBM.ClinicManagementSystem.Models.Entities.*;
 import com.IBM.ClinicManagementSystem.Repositories.Mysql.RefreshTokenRepository;
 import com.IBM.ClinicManagementSystem.Services.Mail.MailService;
 import com.IBM.ClinicManagementSystem.Services.Site.UserService;
@@ -50,20 +49,29 @@ public class AuthService {
         }
         try{
             String verificationCode = Helper.generateCode();
-            User user = User.builder()
-                    .name(request.getFirstName()+" "+request.getLastName())
-                    .email(request.getEmail())
-                    .password(passwordEncoder.encode(request.getPassword()))
-                    .phone(request.getPhone())
-                    .address(request.getAddress())
-                    .birthdate(request.getBirthdate())
-                    .gender(request.getGender())
-                    .role(request.getRole())
-                    .verificationCode(verificationCode)
-                    .verificationCodeExpirationTime(LocalDateTime.now().plusMinutes(15))
-                    .build();
+            User user;
+
+            switch (request.getRole()) {
+                case ADMIN -> user = Admin.builder().build();
+                case DOCTOR -> user = Doctor.builder().build();
+                case PATIENT -> user = Patient.builder().build();
+                default -> throw new IllegalArgumentException("Invalid role");
+            }
+
+            user.setName(request.getFirstName() + " " + request.getLastName());
+            user.setEmail(request.getEmail());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setPhone(request.getPhone());
+            user.setAddress(request.getAddress());
+            user.setBirthdate(request.getBirthdate());
+            user.setGender(request.getGender());
+            user.setRole(request.getRole());
+            user.setVerificationCode(verificationCode);
+            user.setVerificationCodeExpirationTime(LocalDateTime.now().plusMinutes(15));
+
             userService.saveUser(user);
-            mailService.sendCodeToViaEmail(MailMapper.toDTO(user.getEmail(),verificationCode));
+
+            mailService.sendCodeToViaEmail(MailMapper.toDTO(user.getEmail(), verificationCode));
             return "Please Check Your Email to Get Verification Code, It's Valid For Just 15 Minutes";
         }catch (Exception e){
             e.printStackTrace();

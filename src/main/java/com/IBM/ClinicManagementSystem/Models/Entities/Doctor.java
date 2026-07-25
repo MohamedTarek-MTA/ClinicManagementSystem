@@ -16,9 +16,7 @@ import java.util.List;
 @SuperBuilder
 public class Doctor extends User{
 
-    @NotBlank(message = "Please insert specialization")
     private String specialization;
-    @NotBlank(message = "Please insert clinic info")
     private String clinicInfo;
 
     @OneToMany(mappedBy = "doctor",cascade = CascadeType.ALL,fetch = FetchType.LAZY)

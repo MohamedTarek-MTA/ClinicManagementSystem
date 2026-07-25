@@ -42,6 +42,8 @@ public class SecurityConfig {
                                 "/",
                                 "/login",
                                 "/register",
+                                "/api/v1/doctors/search",
+                                "/api/v1/doctors/doctor/{id}",
                                 "/css/**",
                                 "/js/**",
                                 "/images/**",
